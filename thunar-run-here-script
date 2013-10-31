@@ -1,0 +1,165 @@
+#! /bin/bash
+# Licensed under the GNU General Public License Version 2
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+####################################################################################################
+## Authored by Anthony Nordquist. https://github.com/SalineOS salinelinux@gmail.com 
+## Copyright 2013 Anthony Nordquist
+
+CurrentDirectory=$(echo "$@" | awk -F '/' '{print $NF}')
+CDTo="$@"
+
+## Load translations
+
+LanguageLess="$(echo "$LANG" | awk -F '.' '{print $1}')"
+
+if [ -f /etc/thunar-run-here/Translations/$LanguageLess ]; then
+ . /etc/thunar-run-here/Translations/$LanguageLess
+else
+ . /etc/thunar-run-here/Translations/en_US
+fi
+
+## Set arrays for yad options
+Title=( "--title=Thunar Run Dialog" )
+WindowIcon=( "--window-icon=gtk-execute" )
+Icon=( "--image=gtk-execute" )
+
+## Error out if we aren't passed a directory
+if [ ! -d "$CDTo" ]; then
+ yad --window-icon="error" --image="error" "${Title[@]}" --width="275" --wrap --text="$TRHNODIR" --button=$"gtk-quit:3" 
+ exit
+fi
+
+## Create a history file
+mkdir -p $HOME/.thunar-run-here-history
+HistoryFile="$HOME/.thunar-run-here-history/$CurrentDirectory"
+
+touch "$HistoryFile"
+
+GetCommand () {
+
+## ResetArray
+YadArray=("")
+
+## Build an array of the history 
+TotalLines=$(cat "$HistoryFile" | sed '/^\s*$/d' | wc -l)
+CurrentLocation="0"
+
+while [ "$CurrentLocation" != "$TotalLines" ]; do
+ CurrentLocation=$(($CurrentLocation + 1))
+ CurrentLine=$(head -n $CurrentLocation "$HistoryFile" | tail -n 1)
+ YadArray=("${YadArray[@]}""$CurrentLine""!")
+done
+
+Options=$(yad --form "${WindowIcon[@]}" "${Icon[@]}" "${Title[@]}" --width=500 --center --editable --field="Command:CBE" --field="$TRHROOTB:CHK" --field="$TRHTERMB:CHK" --button=$"Clear History:3" --button=$"gtk-quit:5" --button=$"gtk-ok:2" "${YadArray[@]}" )
+
+ret="$?"
+
+if [ "$ret" = "252" ]; then
+ exit
+elif [ "$ret" = "5" ]; then
+ exit
+elif [ "$ret" = "3" ]; then
+ rm -rf "$HistoryFile"
+ GetCommand
+ exit
+fi
+
+## Parse options 
+RunCommand=$(echo "$Options" | awk -F '|' '{print $1}')
+RunAsRoot=$(echo "$Options" | awk -F '|' '{print $2}')
+RunInTerm=$(echo "$Options" | awk -F '|' '{print $3}')
+
+## Don't do anything stupid if the command to run is left blank
+if [ "$RunCommand" = "" ]; then
+ yad --window-icon="error" --image="error" --width="275" -- wrap --text="$TRHNOCOMMAND" --button=$"gtk-quit:3" --button=$"gtk-ok:5"
+ ret="$?"
+ if [ "$ret" = "252" ]; then
+  exit
+ elif [ "$ret" = "3" ]; then
+  exit
+ else
+  GetCommand
+  exit
+ fi
+fi
+
+## Add the command to history
+if [ "$(cat "$HistoryFile")" != "" ]; then
+ ## Remove all lines in the history that both start and end with the command
+ sed -i "s|^$RunCommand$||" "$HistoryFile"
+ ## Delete all blank lines from history file 
+ sed -i '/^$/d' "$HistoryFile"
+ ## Actually add the run command to the top of history 
+ sed -i "1 i $RunCommand" "$HistoryFile"
+else
+ echo "$RunCommand">>"$HistoryFile"
+fi
+
+
+}
+
+RunTheCommand () {
+
+RunScript="TRHS$RANDOM"
+
+## Set needed arrays
+if [ "$RunInTerm" = "TRUE" ]; then
+ TermArray=( "xfce4-terminal -H --command=/tmp/$RunScript")
+else
+ UseNotify="True"
+ TermArray=( "/tmp/$RunScript" )
+fi
+
+if [ "$RunAsRoot" = "TRUE" ]; then
+ RootArray=( "gksu" )
+fi
+
+CommandArray=( $RunCommand )
+
+## Generate simple script
+echo '#!/bin/bash'>>"/tmp/$RunScript"
+echo "cd \"$CDTo\"">>"/tmp/$RunScript"
+echo "${CommandArray[@]}">>"/tmp/$RunScript"
+echo "echo '$TRHEXE ${CommandArray[@]} $TRHCOMPLETE'">>"/tmp/$RunScript"
+echo 'exit'>>"/tmp/$RunScript"
+
+## This is here to aid in debugging
+cat "/tmp/$RunScript"
+
+## Make script executable
+chmod +x /tmp/"$RunScript"
+
+## Run the script
+"${RootArray[@]}" "${TermArray[@]}"
+
+sleep 1
+
+## Use notification area to tell the user we are done
+if [ "$UseNotify" = "True" ]; then
+ notify-send -u normal -i gtk-execute -t 35000 "$TRHNOTIFY"
+fi
+
+## Remove script
+rm -rf /tmp/"$RunScript"
+
+}
+
+
+GetCommand
+
+RunTheCommand
+
+exit 0

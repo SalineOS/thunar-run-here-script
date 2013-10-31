@@ -1,0 +1,14 @@
+export TRHNOCOMMAND="The command to run cannot be left blank."
+
+export TRHTERMB="Run in terminal"
+
+export TRHROOTB="Run as root"
+
+export TRHNODIR="You must pass a directory to this program."
+
+export TRHEXE="Execution of"
+
+export TRHCOMPLETE="complete"
+
+export TRHNOTIFY="Execution of command in
+$CDTo complete"

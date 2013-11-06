@@ -63,7 +63,7 @@ while [ "$CurrentLocation" != "$TotalLines" ]; do
  YadArray=("${YadArray[@]}""$CurrentLine""!")
 done
 
-Options=$(yad --form "${WindowIcon[@]}" "${Icon[@]}" "${Title[@]}" --width=500 --center --editable --field="Command:CBE" --field="$TRHROOTB:CHK" --field="$TRHTERMB:CHK" --button=$"Clear History:3" --button=$"gtk-quit:5" --button=$"gtk-ok:2" "${YadArray[@]}" )
+Options=$(yad --form "${WindowIcon[@]}" "${Icon[@]}" "${Title[@]}" --separator='ReallyLongObscureSeparator' --width=500 --center --editable --field="Command:CBE" --field="$TRHROOTB:CHK" --field="$TRHTERMB:CHK" --button=$"Clear History:3" --button=$"gtk-quit:5" --button=$"gtk-ok:2" "${YadArray[@]}" )
 
 ret="$?"
 
@@ -78,9 +78,9 @@ elif [ "$ret" = "3" ]; then
 fi
 
 ## Parse options 
-RunCommand=$(echo "$Options" | awk -F '|' '{print $1}')
-RunAsRoot=$(echo "$Options" | awk -F '|' '{print $2}')
-RunInTerm=$(echo "$Options" | awk -F '|' '{print $3}')
+RunCommand=$(echo "$Options" | awk -F 'ReallyLongObscureSeparator' '{print $1}')
+RunAsRoot=$(echo "$Options" | awk -F 'ReallyLongObscureSeparator' '{print $2}')
+RunInTerm=$(echo "$Options" | awk -F 'ReallyLongObscureSeparator' '{print $3}')
 
 ## Don't do anything stupid if the command to run is left blank
 if [ "$RunCommand" = "" ]; then
@@ -97,9 +97,65 @@ if [ "$RunCommand" = "" ]; then
 fi
 
 ## Add the command to history
+
 if [ "$(cat "$HistoryFile")" != "" ]; then
  ## Remove all lines in the history that both start and end with the command
- sed -i "s|^$RunCommand$||" "$HistoryFile"
+ ## Find a separator for sed that the user doesn't have in the command
+ Light="Green"
+ if [ "$(echo "$RunCommand" | grep "%")" = "" ]; then
+  sed -i "s%^$RunCommand$%%g" "$HistoryFile"
+  Light="Red"
+ fi
+
+ if [ "$Light" != "Red" ]; then
+ if [ "$(echo "$RunCommand" | grep ":")" = "" ]; then
+  sed -i "s:^$RunCommand$::g" "$HistoryFile"
+  Light="Red"
+ fi
+ fi
+ 
+ if [ "$Light" != "Red" ]; then
+ if [ "$(echo "$RunCommand" | grep ";")" = "" ]; then
+  sed -i "s;^$RunCommand$;;g" "$HistoryFile"
+  Light="Red"
+ fi
+ fi
+ 
+ if [ "$Light" != "Red" ]; then
+ if [ "$(echo "$RunCommand" | grep "|")" = "" ]; then
+  sed -i "s|^$RunCommand$||g" "$HistoryFile"
+  Light="Red"
+ fi
+ fi
+
+ if [ "$Light" != "Red" ]; then
+ if [ "$(echo "$RunCommand" | grep "/")" = "" ]; then
+  sed -i "s/^$RunCommand$//g" "$HistoryFile"
+  Light="Red"
+ fi
+ fi
+
+ if [ "$Light" != "Red" ]; then
+ if [ "$(echo "$RunCommand" | grep ",")" = "" ]; then
+  sed -i "s,^$RunCommand$,,g" "$HistoryFile"
+  Light="Red"
+ fi
+ fi
+
+ if [ "$Light" != "Red" ]; then
+ if [ "$(echo "$RunCommand" | grep ".")" = "" ]; then
+  sed -i "s.^$RunCommand$..g" "$HistoryFile"
+  Light="Red"
+ fi
+ fi
+
+ if [ "$Light" != "Red" ]; then
+ if [ "$(echo "$RunCommand" | grep "+")" = "" ]; then
+  sed -i "s+^$RunCommand$++g" "$HistoryFile"
+  Light="Red"
+ fi
+ fi
+
  ## Delete all blank lines from history file 
  sed -i '/^$/d' "$HistoryFile"
  ## Actually add the run command to the top of history 
@@ -108,6 +164,9 @@ else
  echo "$RunCommand">>"$HistoryFile"
 fi
 
+if [ "$(head "$HistoryFile")" = "" ]; then
+ echo "$RunCommand">>"$HistoryFile"
+fi
 
 }
 

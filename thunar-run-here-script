@@ -176,14 +176,14 @@ RunScript="TRHS$RANDOM"
 
 ## Set needed arrays
 if [ "$RunInTerm" = "TRUE" ]; then
- TermArray=( "xfce4-terminal" "-H" "--command=/tmp/$RunScript")
+ TermArray=( ""xfce4-terminal" "-H" "--command=/tmp/$RunScript"")
 else
  UseNotify="True"
  TermArray=( "/tmp/$RunScript" )
 fi
 
 if [ "$RunAsRoot" = "TRUE" ]; then
- RunArray=( "gksu" )
+ RootArray=( "gksu" )
 fi
 
 CommandArray=( $RunCommand )

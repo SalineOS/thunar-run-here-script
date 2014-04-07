@@ -63,7 +63,7 @@ while [ "$CurrentLocation" != "$TotalLines" ]; do
  YadArray=("${YadArray[@]}""$CurrentLine""!")
 done
 
-Options=$(yad --form "${WindowIcon[@]}" "${Icon[@]}" "${Title[@]}" --separator='ReallyLongObscureSeparator' --width=500 --center --editable --field="Command:CBE" --field="$TRHROOTB:CHK" --field="$TRHTERMB:CHK" --button=$"Clear History:3" --button=$"gtk-quit:5" --button=$"gtk-ok:2" "${YadArray[@]}" )
+Options=$(yad --form "${WindowIcon[@]}" "${Icon[@]}" "${Title[@]}" --separator='ReallyLongObscureSeparator' --width=500 --center --editable --field="Command:CBE" --field="$TRHROOTB:CHK" --field="$TRHTERMB:CHK" --button=$"Clear History!user-trash:3" --button=$"gtk-quit:5" --button=$"gtk-ok:2" "${YadArray[@]}" )
 
 ret="$?"
 
